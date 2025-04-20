@@ -1,0 +1,328 @@
+﻿using System.Collections.Generic;
+using System.IO;
+using UnityEngine;
+using System.Text;
+using System.Diagnostics;
+
+namespace Minimoo
+{
+    public enum LogLevel
+    {
+        Nothing = 0x0000,
+        Error = 0x0001,
+        Exception = 0x0011,
+        Warning = 0x0111,
+        Info = 0x1111,
+    }
+
+    public struct DebugLogItem
+    {
+        public object Message;
+        public string Color;
+        public int Framecount;
+        public float Time;
+        public int TimePrecision;
+        public bool DisplayFrameCount;
+
+        public DebugLogItem(object message, string color, int framecount, float time, int timePrecision, bool displayFrameCount)
+        {
+            Message = message;
+            Color = color;
+            Framecount = framecount;
+            Time = time;
+            TimePrecision = timePrecision;
+            DisplayFrameCount = displayFrameCount;
+        }
+    }
+
+    public static class D
+    {
+        private static bool s_saveToFile = false;
+        private static bool s_enabled = false;
+        public static bool Enabled { get { return s_enabled; } set { s_enabled = value; } }
+        private static LogLevel s_logLevel = LogLevel.Info;
+        private const int k_logValidDay = 2;
+        private const int k_logHistoryMaxLength = 256;
+
+        private static List<string> logsToFile = new List<string>();
+        private static List<DebugLogItem> s_logHistory = new List<DebugLogItem>(k_logHistoryMaxLength);
+
+        static D()
+        {
+#if D_LOG || UNITY_EDITOR
+            s_enabled = true;
+#else
+            s_enabled = false;
+#endif
+
+#if D_LOG_INFO
+            s_logLevel = LogLevel.Info;
+#elif D_LOG_WARN
+            s_logLevel = LogLevel.Warning;
+#elif D_LOG_EXCEPT
+            s_logLevel = LogLevel.Exception;
+#elif D_LOG_ERROR
+            s_logLevel = LogLevel.Error;
+#endif
+
+#if D_LOG_SAVE
+            s_saveToFile = true;
+#endif
+        }
+
+        public static void SaveLog()
+        {
+#if !UNITY_WEBPLAYER
+            if (!Directory.Exists(Application.dataPath))
+            {
+                Directory.CreateDirectory(Application.dataPath);
+            }
+
+            string filePath = Path.Combine(Application.dataPath, "Log.txt");
+
+            FileInfo file = new FileInfo(filePath);
+            var span = System.DateTime.UtcNow - file.CreationTimeUtc;
+
+            if (span.Days > k_logValidDay)
+            {
+                File.Delete(filePath);
+                var writer = File.Create(filePath);
+                writer.Close();
+            }
+
+            using (var writer = File.AppendText(filePath))
+            {
+                for (int i = 0; i < logsToFile.Count; ++i)
+                {
+                    writer.WriteLine(logsToFile[i]);
+                }
+            }
+
+            logsToFile.Clear();
+#endif
+        }
+
+        public static void Log(object message)
+        {
+            if (!ShouldLog(LogLevel.Info))
+                return;
+
+            string callerObjectName = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Name;
+            string color = "#00FFFF";
+
+            string output = "";
+            output += $"<color=#82d3f9>[f{Time.frameCount}]</color> ";
+            output += $"<color=#f9a682>[{Time.time:F3}]</color> ";
+            output += $"{callerObjectName} : ";
+            output += $"<color={color}>{message}</color>";
+
+            UnityEngine.Debug.Log(output);
+
+            var item = new DebugLogItem(message, color, Time.frameCount, Time.time, 3, true);
+            AddToLogHistory(item);
+
+            if (s_saveToFile)
+            {
+                logsToFile.Add(message.ToString());
+            }
+        }
+
+        public static void LogFormat(string format, params object[] args)
+        {
+            if (!ShouldLog(LogLevel.Info))
+                return;
+
+            string message = string.Format(format, args);
+            Log(message);
+        }
+
+        public static void Warn(object message)
+        {
+            if (!ShouldLog(LogLevel.Warning))
+                return;
+
+            string callerObjectName = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Name;
+            string color = "#FFC400";
+
+            string output = "";
+            output += $"<color=#82d3f9>[f{Time.frameCount}]</color> ";
+            output += $"<color=#f9a682>[{Time.time:F3}]</color> ";
+            output += $"{callerObjectName} : ";
+            output += $"<color={color}>{message}</color>";
+
+            UnityEngine.Debug.LogWarning(output);
+
+            var item = new DebugLogItem(message, color, Time.frameCount, Time.time, 3, true);
+            AddToLogHistory(item);
+
+            if (s_saveToFile)
+            {
+                logsToFile.Add(message.ToString());
+            }
+        }
+
+        public static void WarnFormat(string format, params object[] args)
+        {
+            if (!ShouldLog(LogLevel.Warning))
+                return;
+
+            string message = string.Format(format, args);
+            Warn(message);
+        }
+
+        public static void Error(object message)
+        {
+            if (!ShouldLog(LogLevel.Error))
+                return;
+
+            string callerObjectName = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Name;
+            string color = "#FF2A00";
+
+            string output = "";
+            output += $"<color=#82d3f9>[f{Time.frameCount}]</color> ";
+            output += $"<color=#f9a682>[{Time.time:F3}]</color> ";
+            output += $"{callerObjectName} : ";
+            output += $"<color={color}>{message}</color>";
+
+            UnityEngine.Debug.LogError(output);
+
+            var item = new DebugLogItem(message, color, Time.frameCount, Time.time, 3, true);
+            AddToLogHistory(item);
+
+            if (s_saveToFile)
+            {
+                logsToFile.Add(message.ToString());
+            }
+        }
+
+        public static void ErrorFormat(string format, params object[] args)
+        {
+            if (!ShouldLog(LogLevel.Error))
+                return;
+
+            string message = string.Format(format, args);
+            Error(message);
+        }
+
+        public static void Exception(object message)
+        {
+            if (!ShouldLog(LogLevel.Exception))
+                return;
+
+            string callerObjectName = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Name;
+            string color = "#FF2A00";
+
+            var exception = new System.Exception(message.ToString());
+
+            string output = "";
+            output += $"<color=#82d3f9>[f{Time.frameCount}]</color> ";
+            output += $"<color=#f9a682>[{Time.time:F3}]</color> ";
+            output += $"{callerObjectName} : ";
+            output += $"<color={color}>{message}</color>";
+            output += $"\n<color={color}>Stack Trace:</color>\n{exception.StackTrace}";
+
+            if (exception.InnerException != null)
+            {
+                output += $"\n<color={color}>Inner Exception:</color>\n{exception.InnerException}";
+            }
+
+            UnityEngine.Debug.LogException(exception);
+
+            var item = new DebugLogItem(output, color, Time.frameCount, Time.time, 3, true);
+            AddToLogHistory(item);
+
+            if (s_saveToFile)
+            {
+                logsToFile.Add(output);
+            }
+        }
+
+        public static void ExceptionFormat(string format, params object[] args)
+        {
+            if (!ShouldLog(LogLevel.Exception))
+                return;
+
+            string message = string.Format(format, args);
+            Exception(message);
+        }
+
+        private static void AddToLogHistory(DebugLogItem item)
+        {
+            if (s_logHistory.Count >= k_logHistoryMaxLength)
+            {
+                s_logHistory.RemoveAt(0);
+            }
+            s_logHistory.Add(item);
+        }
+
+        public static string GetLogHistory()
+        {
+            StringBuilder log = new StringBuilder();
+            for (int i = 0; i < s_logHistory.Count; i++)
+            {
+                string colorPrefix = !string.IsNullOrEmpty(s_logHistory[i].Color) ? $"<color={s_logHistory[i].Color}>" : "";
+                string colorSuffix = !string.IsNullOrEmpty(s_logHistory[i].Color) ? "</color>" : "";
+
+                if (s_logHistory[i].DisplayFrameCount)
+                {
+                    log.Append($"<color=#82d3f9>[{s_logHistory[i].Framecount}]</color> ");
+                }
+                log.Append($"<color=#f9a682>[{s_logHistory[i].Time:F3}]</color> ");
+                log.Append($"{colorPrefix}{s_logHistory[i].Message}{colorSuffix}");
+                log.Append(System.Environment.NewLine);
+            }
+            return log.ToString();
+        }
+
+        public static void ClearLogHistory()
+        {
+            s_logHistory.Clear();
+        }
+
+        [System.Diagnostics.ConditionalAttribute("UNITY_EDITOR")]
+        public static void Assert(bool condition)
+        {
+            Assert(condition, string.Empty, true);
+        }
+
+        [System.Diagnostics.ConditionalAttribute("UNITY_EDITOR")]
+        public static void Assert(bool condition, string assertString)
+        {
+            Assert(condition, assertString, false);
+        }
+
+        [System.Diagnostics.ConditionalAttribute("UNITY_EDITOR")]
+        public static void Assert(bool condition, string assertString, bool pauseOnFail)
+        {
+            if (!s_enabled)
+            {
+                return;
+            }
+
+            if (!condition)
+            {
+                UnityEngine.Debug.LogError("Assert Failed! " + assertString);
+                if (pauseOnFail)
+                {
+                    UnityEngine.Debug.Break();
+                }
+            }
+        }
+
+        public static void SetLogLevel(LogLevel level)
+        {
+            s_logLevel = level;
+            Log($"로그 레벨이 {level}로 설정되었습니다.");
+        }
+
+        public static LogLevel GetLogLevel()
+        {
+            return s_logLevel;
+        }
+
+        private static bool ShouldLog(LogLevel level)
+        {
+            return s_enabled && (s_logLevel & level) == level;
+        }
+    }
+}
