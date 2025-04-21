@@ -47,17 +47,43 @@ namespace Minimoo.Extensions
         /// <param name="target">캐스팅할 객체</param>
         /// <param name="result">캐스팅 결과</param>
         /// <returns>캐스팅 성공 여부</returns>
-        public static bool TryCast<T>(this object target, out T result) where T : class
+        public static bool TryCast<T>(this object target, out T result)
         {
-            if (target is T casted)
+            try
             {
-                result = casted;
-                return true;
-            }
+                if (target == null)
+                {
+                    result = default;
+                    return false;
+                }
 
-            result = null;
-            D.Warn($"Failed to cast {target?.GetType().Name ?? "null"} to {typeof(T).Name}");
-            return false;
+                Type targetType = target.GetType();
+                Type resultType = typeof(T);
+
+                // 기본 타입 간의 변환 시도
+                if (resultType.IsPrimitive || resultType == typeof(string) || resultType == typeof(decimal))
+                {
+                    result = (T)Convert.ChangeType(target, resultType);
+                    return true;
+                }
+
+                // 상속 관계 확인 (양방향)
+                if (resultType.IsAssignableFrom(targetType) || targetType.IsAssignableFrom(resultType))
+                {
+                    result = (T)target;
+                    return true;
+                }
+
+                result = default;
+                D.Warn($"Failed to cast {targetType.Name} to {resultType.Name}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                result = default;
+                D.Warn($"Failed to cast {target?.GetType().Name ?? "null"} to {typeof(T).Name}: {ex.Message}");
+                return false;
+            }
         }
 
         /// <summary>
