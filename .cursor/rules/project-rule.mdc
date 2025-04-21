@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+- package.json 내부의 버전의 변경될때마다 tag를 버전 코드에 맞게 변경해서 commit push 하기
