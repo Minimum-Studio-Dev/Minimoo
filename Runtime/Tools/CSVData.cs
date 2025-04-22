@@ -3,6 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Linq;
+using Minimoo.Attributes;
+using Minimoo.Extensions;
 
 namespace Minimoo.Tools
 {
@@ -10,229 +13,236 @@ namespace Minimoo.Tools
     public class CSVData : ScriptableObject
     {
         [SerializeField] private TextAsset _textAsset;
-        
-        private const char QUOTE_CHAR = '\"';
-        private const char COMMA_CHAR = ',';
-        private const char CR_CHAR = '\r';
-        private const char LF_CHAR = '\n';
-        private static readonly string LINE_SPLIT_RE = @"\r\n|\n\r|\n|\r";
-        private static readonly char[] TRIM_CHARS = { '\"' };
+        [SerializeField] private List<CSVRow> _rows = new List<CSVRow>();
 
-        private List<string[]> _data;
-        private Dictionary<string, int> _headerIndexMap;
-        private bool _hasHeader = true;
+        private string[] _headers;
 
         private void OnEnable()
         {
-            LoadData();
+            if (_textAsset != null)
+            {
+                ParseCSV(_textAsset.text);
+            }
         }
 
-        private void LoadData()
+        [Button("Parse TextAsset")]
+        public void ParseTextAsset()
         {
             if (_textAsset == null)
             {
-                Debug.LogError($"TextAsset가 설정되지 않았습니다: {name}");
+                D.Error("TextAsset이 지정되지 않았습니다.");
                 return;
             }
 
-            _data = Parse(_textAsset.text);
-            _headerIndexMap = new Dictionary<string, int>();
-
-            if (_hasHeader && _data.Count > 0)
-            {
-                var headers = _data[0];
-                for (var i = 0; i < headers.Length; i++)
-                {
-                    _headerIndexMap[headers[i]] = i;
-                }
-            }
+            ParseCSV(_textAsset.text);
+            D.Log($"CSV 데이터 파싱이 완료되었습니다. (총 {_rows.Count}행)");
         }
 
         public void SetTextAsset(TextAsset textAsset)
         {
             _textAsset = textAsset;
-            LoadData();
+            ParseCSV(textAsset.text);
         }
 
-        private static List<string[]> Parse(string data)
+        private void ParseCSV(string csvText)
         {
-            // 먼저 정규식으로 라인을 분리
-            var lines = Regex.Split(data, LINE_SPLIT_RE);
-            if (lines.Length <= 0) return new List<string[]>();
+            _rows.Clear();
 
-            var result = new List<string[]>();
-            foreach (var line in lines)
+            try
             {
-                if (string.IsNullOrEmpty(line)) continue;
-
-                var currentRow = new List<string>();
-                var currentValue = new System.Text.StringBuilder();
-                var inQuotes = false;
-                var i = 0;
-
-                while (i < line.Length)
+                var reader = new StringReader(csvText);
+                string headerLine = reader.ReadLine();
+                if (string.IsNullOrEmpty(headerLine))
                 {
-                    var c = line[i];
+                    D.Error("CSV 헤더가 비어있습니다.");
+                    return;
+                }
 
-                    if (c == QUOTE_CHAR)
+                // 헤더 파싱
+                _headers = ParseCSVLine(headerLine);
+                if (_headers == null || _headers.Length == 0)
+                {
+                    D.Error("CSV 헤더를 파싱할 수 없습니다.");
+                    return;
+                }
+
+                // 데이터 파싱
+                string line;
+                var currentRow = new List<string>();
+                var currentField = new System.Text.StringBuilder();
+                var inQuotes = false;
+                int lineNumber = 1;
+                CSVRow currentCSVRow = null;
+
+                while ((line = reader.ReadLine()) != null)
+                {
+                    lineNumber++;
+
+                    // 빈 줄이나 주석 건너뛰기
+                    if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#"))
+                        continue;
+
+                    foreach (char c in line)
                     {
-                        if (inQuotes && i + 1 < line.Length && line[i + 1] == QUOTE_CHAR)
+                        if (c == '"')
                         {
-                            currentValue.Append(QUOTE_CHAR);
-                            i++;
+                            inQuotes = !inQuotes;
+                            currentField.Append(c);
+                        }
+                        else if (c == ',' && !inQuotes)
+                        {
+                            currentRow.Add(currentField.ToString());
+                            currentField.Clear();
                         }
                         else
                         {
-                            inQuotes = !inQuotes;
+                            currentField.Append(c);
                         }
                     }
-                    else if (c == COMMA_CHAR && !inQuotes)
+
+                    // 줄의 마지막이 아닌 경우 줄바꿈 추가
+                    if (inQuotes)
                     {
-                        currentRow.Add(currentValue.ToString().Trim(TRIM_CHARS));
-                        currentValue.Clear();
+                        currentField.Append("\n");
+                        continue;
+                    }
+
+                    // 마지막 필드 추가
+                    currentRow.Add(currentField.ToString());
+                    currentField.Clear();
+
+                    // 행 데이터 처리
+                    if (currentRow.Count > 0)
+                    {
+                        ProcessRow(currentRow.ToArray(), lineNumber);
+                        currentRow.Clear();
+                    }
+                }
+
+                // 마지막 행이 따옴표로 끝나지 않은 경우 처리
+                if (currentRow.Count > 0 || currentField.Length > 0)
+                {
+                    if (currentField.Length > 0)
+                    {
+                        currentRow.Add(currentField.ToString());
+                    }
+                    ProcessRow(currentRow.ToArray(), lineNumber);
+                }
+            }
+            catch (Exception e)
+            {
+                D.Error($"CSV 파싱 중 오류 발생: {e.Message}");
+            }
+        }
+
+        private void ProcessRow(string[] values, int lineNumber)
+        {
+            if (values.Length == 0) return;
+
+            var key = CleanupValue(values[0]);
+            var row = new CSVRow(key);
+
+            for (int i = 0; i < _headers.Length; i++)
+            {
+                var value = i < values.Length ? CleanupValue(values[i]) : string.Empty;
+                row.SetValue(_headers[i], value);
+            }
+
+            _rows.Add(row);
+
+            if (values.Length != _headers.Length)
+            {
+                D.Warn($"헤더와 데이터의 열 수가 일치하지 않습니다. (행: {lineNumber}, 헤더: {_headers.Length}, 데이터: {values.Length})");
+            }
+        }
+
+        private string CleanupValue(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return string.Empty;
+
+            // 따옴표로 둘러싸인 값 처리
+            if (value.StartsWith("\"") && value.EndsWith("\""))
+            {
+                // 앞뒤 따옴표 제거
+                value = value.Substring(1, value.Length - 2);
+                // 이스케이프된 따옴표 처리
+                value = value.Replace("\"\"", "\"");
+            }
+
+            return value.Trim();
+        }
+
+        private string[] ParseCSVLine(string line)
+        {
+            var values = new List<string>();
+            var currentValue = new System.Text.StringBuilder();
+            var inQuotes = false;
+
+            for (int i = 0; i < line.Length; i++)
+            {
+                var c = line[i];
+
+                if (c == '"')
+                {
+                    if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
+                    {
+                        currentValue.Append('"');
+                        i++;
                     }
                     else
                     {
-                        currentValue.Append(c);
+                        inQuotes = !inQuotes;
                     }
-
-                    i++;
                 }
-
-                if (currentValue.Length > 0 || currentRow.Count > 0)
+                else if (c == ',' && !inQuotes)
                 {
-                    currentRow.Add(currentValue.ToString().Trim(TRIM_CHARS));
-                    result.Add(currentRow.ToArray());
+                    values.Add(CleanupValue(currentValue.ToString()));
+                    currentValue.Clear();
+                }
+                else
+                {
+                    currentValue.Append(c);
                 }
             }
 
-            return result;
+            values.Add(CleanupValue(currentValue.ToString()));
+            return values.ToArray();
         }
 
-        public int RowCount => _hasHeader ? _data?.Count - 1 ?? 0 : _data?.Count ?? 0;
+        public int RowCount => _rows.Count;
+        public string[] Headers => _headers;
 
-        public string[] GetRow(int rowIndex)
+        public CSVRow GetRow(int rowIndex)
         {
-            if (_data == null || rowIndex < 0 || rowIndex >= RowCount)
+            if (rowIndex < 0 || rowIndex >= _rows.Count)
             {
-                Debug.LogError($"잘못된 행 인덱스입니다: {rowIndex}");
+                D.Error($"유효하지 않은 행 인덱스입니다: {rowIndex}");
                 return null;
             }
-
-            return _data[_hasHeader ? rowIndex + 1 : rowIndex];
+            return _rows[rowIndex];
         }
 
-        public string GetValue(int rowIndex, int columnIndex)
+        public CSVRow FindRowByKey(string key)
         {
-            var row = GetRow(rowIndex);
-            if (row == null || columnIndex < 0 || columnIndex >= row.Length)
-            {
-                Debug.LogError($"잘못된 열 인덱스입니다: {columnIndex}");
-                return null;
-            }
-
-            return row[columnIndex];
+            return _rows.FirstOrDefault(row => row.Key == key);
         }
 
         public string GetValue(int rowIndex, string columnName)
         {
-            if (!_hasHeader)
-            {
-                Debug.LogError("헤더가 없는 CSV에서는 열 이름으로 값을 가져올 수 없습니다.");
-                return null;
-            }
-
-            if (!_headerIndexMap.TryGetValue(columnName, out var columnIndex))
-            {
-                Debug.LogError($"열을 찾을 수 없습니다: {columnName}");
-                return null;
-            }
-
-            return GetValue(rowIndex, columnIndex);
-        }
-
-        public T GetValue<T>(int rowIndex, int columnIndex) where T : struct
-        {
-            var value = GetValue(rowIndex, columnIndex);
-            if (value == null) return default;
-
-            try
-            {
-                return (T)Convert.ChangeType(value, typeof(T));
-            }
-            catch
-            {
-                Debug.LogError($"값을 {typeof(T)}로 변환할 수 없습니다: {value}");
-                return default;
-            }
+            var row = GetRow(rowIndex);
+            return row?.GetValue(columnName);
         }
 
         public T GetValue<T>(int rowIndex, string columnName) where T : struct
         {
-            var value = GetValue(rowIndex, columnName);
-            if (value == null) return default;
-
-            try
-            {
-                return (T)Convert.ChangeType(value, typeof(T));
-            }
-            catch
-            {
-                Debug.LogError($"값을 {typeof(T)}로 변환할 수 없습니다: {value}");
-                return default;
-            }
+            var row = GetRow(rowIndex);
+            return row != null ? row.GetValue<T>(columnName) : default;
         }
 
-        public string[] GetHeaders()
+        public List<CSVRow> GetAllRows()
         {
-            if (!_hasHeader)
-            {
-                Debug.LogError("헤더가 없는 CSV입니다.");
-                return null;
-            }
-
-            return _data?[0];
-        }
-
-        public List<string[]> GetAllRows()
-        {
-            if (_data == null) return new List<string[]>();
-            var startIndex = _hasHeader ? 1 : 0;
-            return _data.GetRange(startIndex, RowCount);
-        }
-
-        public Dictionary<string, object>[] GetDictionaryData()
-        {
-            if (_data == null || !_hasHeader) return null;
-
-            var headers = GetHeaders();
-            var result = new Dictionary<string, object>[RowCount];
-
-            for (var i = 0; i < RowCount; i++)
-            {
-                var row = GetRow(i);
-                var entry = new Dictionary<string, object>();
-
-                for (var j = 0; j < headers.Length && j < row.Length; j++)
-                {
-                    var value = row[j];
-                    if (int.TryParse(value, out var n))
-                    {
-                        entry[headers[j]] = n;
-                    }
-                    else if (float.TryParse(value, out var f))
-                    {
-                        entry[headers[j]] = f;
-                    }
-                    else
-                    {
-                        entry[headers[j]] = value;
-                    }
-                }
-                result[i] = entry;
-            }
-
-            return result;
+            return _rows;
         }
     }
 }
