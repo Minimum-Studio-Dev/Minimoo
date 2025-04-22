@@ -6,22 +6,38 @@ using System.Text.RegularExpressions;
 
 namespace Minimoo.Tools
 {
-    public class CSVReader
+    public class CSVData : ScriptableObject
     {
+        [SerializeField] private TextAsset _textAsset;
+        
+        private const char QUOTE_CHAR = '\"';
+        private const char COMMA_CHAR = ',';
+        private const char CR_CHAR = '\r';
+        private const char LF_CHAR = '\n';
         private static readonly string LINE_SPLIT_RE = @"\r\n|\n\r|\n|\r";
         private static readonly char[] TRIM_CHARS = { '\"' };
 
-        private readonly List<string[]> _data;
-        private readonly Dictionary<string, int> _headerIndexMap;
-        private readonly bool _hasHeader;
+        private List<string[]> _data;
+        private Dictionary<string, int> _headerIndexMap;
+        private bool _hasHeader = true;
 
-        public CSVReader(string csvText, bool hasHeader = true)
+        private void OnEnable()
         {
-            _data = Parse(csvText);
-            _hasHeader = hasHeader;
+            LoadData();
+        }
+
+        private void LoadData()
+        {
+            if (_textAsset == null)
+            {
+                Debug.LogError($"TextAsset가 설정되지 않았습니다: {name}");
+                return;
+            }
+
+            _data = Parse(_textAsset.text);
             _headerIndexMap = new Dictionary<string, int>();
 
-            if (hasHeader && _data.Count > 0)
+            if (_hasHeader && _data.Count > 0)
             {
                 var headers = _data[0];
                 for (var i = 0; i < headers.Length; i++)
@@ -31,83 +47,72 @@ namespace Minimoo.Tools
             }
         }
 
-        public static CSVReader FromFile(string filePath, bool hasHeader = true)
+        public void SetTextAsset(TextAsset textAsset)
         {
-            if (!File.Exists(filePath))
-            {
-                Debug.LogError($"CSV 파일을 찾을 수 없습니다: {filePath}");
-                return null;
-            }
-
-            var csvText = File.ReadAllText(filePath);
-            return new CSVReader(csvText, hasHeader);
+            _textAsset = textAsset;
+            LoadData();
         }
 
         private static List<string[]> Parse(string data)
         {
+            // 먼저 정규식으로 라인을 분리
+            var lines = Regex.Split(data, LINE_SPLIT_RE);
+            if (lines.Length <= 0) return new List<string[]>();
+
             var result = new List<string[]>();
-            var currentRow = new List<string>();
-            var currentValue = new System.Text.StringBuilder();
-            var inQuotes = false;
-            var i = 0;
-
-            while (i < data.Length)
+            foreach (var line in lines)
             {
-                var c = data[i];
+                if (string.IsNullOrEmpty(line)) continue;
 
-                if (c == '"')
+                var currentRow = new List<string>();
+                var currentValue = new System.Text.StringBuilder();
+                var inQuotes = false;
+                var i = 0;
+
+                while (i < line.Length)
                 {
-                    if (inQuotes && i + 1 < data.Length && data[i + 1] == '"')
+                    var c = line[i];
+
+                    if (c == QUOTE_CHAR)
                     {
-                        currentValue.Append('"');
-                        i++;
+                        if (inQuotes && i + 1 < line.Length && line[i + 1] == QUOTE_CHAR)
+                        {
+                            currentValue.Append(QUOTE_CHAR);
+                            i++;
+                        }
+                        else
+                        {
+                            inQuotes = !inQuotes;
+                        }
+                    }
+                    else if (c == COMMA_CHAR && !inQuotes)
+                    {
+                        currentRow.Add(currentValue.ToString().Trim(TRIM_CHARS));
+                        currentValue.Clear();
                     }
                     else
                     {
-                        inQuotes = !inQuotes;
+                        currentValue.Append(c);
                     }
+
+                    i++;
                 }
-                else if (c == ',' && !inQuotes)
+
+                if (currentValue.Length > 0 || currentRow.Count > 0)
                 {
-                    currentRow.Add(currentValue.ToString());
-                    currentValue.Clear();
-                }
-                else if ((c == '\r' || c == '\n') && !inQuotes)
-                {
-                    currentRow.Add(currentValue.ToString());
-                    currentValue.Clear();
+                    currentRow.Add(currentValue.ToString().Trim(TRIM_CHARS));
                     result.Add(currentRow.ToArray());
-                    currentRow.Clear();
-
-                    // Skip the next character if it's part of a CRLF pair
-                    if (c == '\r' && i + 1 < data.Length && data[i + 1] == '\n')
-                    {
-                        i++;
-                    }
                 }
-                else
-                {
-                    currentValue.Append(c);
-                }
-
-                i++;
-            }
-
-            // Add the last value and row if they exist
-            if (currentValue.Length > 0 || currentRow.Count > 0)
-            {
-                currentRow.Add(currentValue.ToString());
-                result.Add(currentRow.ToArray());
             }
 
             return result;
         }
 
-        public int RowCount => _hasHeader ? _data.Count - 1 : _data.Count;
+        public int RowCount => _hasHeader ? _data?.Count - 1 ?? 0 : _data?.Count ?? 0;
 
         public string[] GetRow(int rowIndex)
         {
-            if (rowIndex < 0 || rowIndex >= RowCount)
+            if (_data == null || rowIndex < 0 || rowIndex >= RowCount)
             {
                 Debug.LogError($"잘못된 행 인덱스입니다: {rowIndex}");
                 return null;
@@ -145,10 +150,10 @@ namespace Minimoo.Tools
             return GetValue(rowIndex, columnIndex);
         }
 
-        public T GetValue<T>(int rowIndex, int columnIndex, T defaultValue = default)
+        public T GetValue<T>(int rowIndex, int columnIndex) where T : struct
         {
             var value = GetValue(rowIndex, columnIndex);
-            if (value == null) return defaultValue;
+            if (value == null) return default;
 
             try
             {
@@ -157,14 +162,14 @@ namespace Minimoo.Tools
             catch
             {
                 Debug.LogError($"값을 {typeof(T)}로 변환할 수 없습니다: {value}");
-                return defaultValue;
+                return default;
             }
         }
 
-        public T GetValue<T>(int rowIndex, string columnName, T defaultValue = default)
+        public T GetValue<T>(int rowIndex, string columnName) where T : struct
         {
             var value = GetValue(rowIndex, columnName);
-            if (value == null) return defaultValue;
+            if (value == null) return default;
 
             try
             {
@@ -173,7 +178,7 @@ namespace Minimoo.Tools
             catch
             {
                 Debug.LogError($"값을 {typeof(T)}로 변환할 수 없습니다: {value}");
-                return defaultValue;
+                return default;
             }
         }
 
@@ -185,25 +190,26 @@ namespace Minimoo.Tools
                 return null;
             }
 
-            return _data[0];
+            return _data?[0];
         }
 
         public List<string[]> GetAllRows()
         {
+            if (_data == null) return new List<string[]>();
             var startIndex = _hasHeader ? 1 : 0;
             return _data.GetRange(startIndex, RowCount);
         }
 
-        // 기존 Read 메서드와의 호환성을 위한 정적 메서드
-        public static List<Dictionary<string, object>> Read(string data)
+        public Dictionary<string, object>[] GetDictionaryData()
         {
-            var reader = new CSVReader(data);
-            var result = new List<Dictionary<string, object>>();
-            var headers = reader.GetHeaders();
+            if (_data == null || !_hasHeader) return null;
 
-            for (var i = 0; i < reader.RowCount; i++)
+            var headers = GetHeaders();
+            var result = new Dictionary<string, object>[RowCount];
+
+            for (var i = 0; i < RowCount; i++)
             {
-                var row = reader.GetRow(i);
+                var row = GetRow(i);
                 var entry = new Dictionary<string, object>();
 
                 for (var j = 0; j < headers.Length && j < row.Length; j++)
@@ -222,7 +228,7 @@ namespace Minimoo.Tools
                         entry[headers[j]] = value;
                     }
                 }
-                result.Add(entry);
+                result[i] = entry;
             }
 
             return result;
