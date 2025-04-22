@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace Minimoo.Tools
 {
+    [CreateAssetMenu(fileName = "CSVData", menuName = "Minimoo/Tools/CSV Data")]
     public class CSVData : ScriptableObject
     {
         [SerializeField] private TextAsset _textAsset;

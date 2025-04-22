@@ -8,6 +8,7 @@ using System.Collections.Generic;
 
 namespace Minimoo.Tools
 {
+    [CreateAssetMenu(fileName = "GoogleSheetData", menuName = "Minimoo/Tools/Google Sheet Data")]
     public class GoogleSheetData : ScriptableObject
     {
         [SerializeField] private string _sheetUrl;
