@@ -19,7 +19,7 @@ namespace Minimoo
             {
                 if (_instance == null)
                 {
-                    _instance = FindObjectOfType<T>();
+                    _instance = FindFirstObjectByType<T>();
                     if (_instance == null)
                     {
                         GameObject obj = new GameObject();
@@ -57,6 +57,14 @@ namespace Minimoo
             }
 
             _instance = this as T;
+        }
+
+        private void Start()
+        {
+            if (Application.isPlaying && transform.parent != null)
+            {
+                transform.SetParent(null);
+            }
         }
     }
 }
