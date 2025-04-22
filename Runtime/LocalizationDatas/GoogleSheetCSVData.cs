@@ -1,11 +1,13 @@
 using UnityEngine;
+using System;
 using System.Net.Http;
-using Cysharp.Threading.Tasks;
 using Minimoo.Attributes;
+using Minimoo.Extensions;
+using Cysharp.Threading.Tasks;
 
 namespace Minimoo.LocalizationDatas
 {
-    [CreateAssetMenu(fileName = "GoogleSheetCSVData", menuName = "Minimoo/Localization/Google Sheet CSV Data")]
+    [CreateAssetMenu(fileName = "Google Sheet CSV Data", menuName = "Minimoo/Localization/Google Sheet CSV Data")]
     public class GoogleSheetCSVData : CSVData
     {
         [SerializeField] private string _sheetUrl;

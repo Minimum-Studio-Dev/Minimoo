@@ -1,10 +1,11 @@
 using UnityEngine;
 using System.IO;
 using Minimoo.Attributes;
+using Minimoo.Extensions;
 
 namespace Minimoo.LocalizationDatas
 {
-    [CreateAssetMenu(fileName = "TextAssetCSVData", menuName = "Minimoo/Localization/TextAsset CSV Data")]
+    [CreateAssetMenu(fileName = "TextAsset CSV Data", menuName = "Minimoo/Localization/TextAsset CSV Data")]
     public class TextAssetCSVData : CSVData
     {
         [SerializeField] private TextAsset _textAsset;

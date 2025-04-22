@@ -1,119 +1,19 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text.RegularExpressions;
 using System.Linq;
-using System.Net.Http;
 using Minimoo.Attributes;
 using Minimoo.Extensions;
-using Cysharp.Threading.Tasks;
 
 namespace Minimoo.LocalizationDatas
 {
-    [CreateAssetMenu(fileName = "CSVData", menuName = "Minimoo/Localization/CSV Data")]
-    public class CSVData : ScriptableObject
+    public abstract class CSVData : ScriptableObject
     {
-        [SerializeField] private TextAsset _textAsset;
-        [SerializeField] private string _sheetUrl;
         [SerializeField] protected List<CSVRow> _rows = new List<CSVRow>();
         [SerializeField] protected string[] _headers;
 
-        private const string EXPORT_URL_FORMAT = "https://docs.google.com/spreadsheets/d/{0}/export?format=csv";
-
         public string[] Headers => _headers;
         public int RowCount => _rows.Count;
-
-        private void OnEnable()
-        {
-            if (_textAsset != null)
-            {
-                ParseCSV(_textAsset.text);
-            }
-        }
-
-        [Button("Parse TextAsset")]
-        public void ParseTextAsset()
-        {
-            if (_textAsset == null)
-            {
-                D.Error("TextAsset이 지정되지 않았습니다.");
-                return;
-            }
-
-            ParseCSV(_textAsset.text);
-            D.Log($"CSV 데이터 파싱이 완료되었습니다. (총 {_rows.Count}행)");
-        }
-
-        [Button("Download Sheet")]
-        public void DownloadSheet()
-        {
-            if (string.IsNullOrEmpty(_sheetUrl))
-            {
-                D.Error("Google Sheet URL이 지정되지 않았습니다.");
-                return;
-            }
-
-            var task = DownloadAndParseSheet();
-            if (task.Result)
-            {
-                D.Log($"Google Sheet 데이터 파싱이 완료되었습니다. (총 {_rows.Count}행)");
-            }
-        }
-
-        public void SetTextAsset(TextAsset textAsset)
-        {
-            _textAsset = textAsset;
-            ParseCSV(textAsset.text);
-        }
-
-        public void SetSheetUrl(string sheetUrl)
-        {
-            _sheetUrl = sheetUrl;
-        }
-
-        private async UniTask<bool> DownloadAndParseSheet()
-        {
-            try
-            {
-                var spreadsheetId = GetSpreadsheetId(_sheetUrl);
-                var exportUrl = string.Format(EXPORT_URL_FORMAT, spreadsheetId);
-
-                using (var client = new HttpClient())
-                {
-                    var response = await client.GetAsync(exportUrl);
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        D.Error($"시트 다운로드 실패: {response.StatusCode}");
-                        return false;
-                    }
-
-                    var csvData = await response.Content.ReadAsStringAsync();
-                    ParseCSV(csvData);
-
-#if UNITY_EDITOR
-                    UnityEditor.EditorUtility.SetDirty(this);
-                    UnityEditor.AssetDatabase.SaveAssets();
-#endif
-
-                    return true;
-                }
-            }
-            catch (Exception e)
-            {
-                D.Error($"시트 데이터 다운로드 실패: {e.Message}");
-                return false;
-            }
-        }
-
-        private static string GetSpreadsheetId(string url)
-        {
-            var startIndex = url.IndexOf("/d/") + 3;
-            var endIndex = url.IndexOf("/", startIndex);
-            if (endIndex == -1)
-                endIndex = url.Length;
-            return url.Substring(startIndex, endIndex - startIndex);
-        }
 
         protected void ParseCSV(string csvText)
         {
