@@ -14,7 +14,7 @@ namespace Minimoo.LocalizationDatas
         private const string EXPORT_URL_FORMAT = "https://docs.google.com/spreadsheets/d/{0}/export?format=csv";
 
         [Button("Download Sheet")]
-        public void DownloadSheet()
+        public async void DownloadSheet()
         {
             if (string.IsNullOrEmpty(_sheetUrl))
             {
@@ -22,10 +22,17 @@ namespace Minimoo.LocalizationDatas
                 return;
             }
 
-            var task = DownloadAndParseSheet();
-            if (task.Result)
+            try
             {
-                D.Log($"Google Sheet 데이터 파싱이 완료되었습니다. (총 {_rows.Count}행)");
+                var success = await DownloadAndParseSheet();
+                if (success)
+                {
+                    D.Log($"Google Sheet 데이터 파싱이 완료되었습니다. (총 {_rows.Count}행)");
+                }
+            }
+            catch (Exception e)
+            {
+                D.Error($"시트 다운로드 중 오류 발생: {e.Message}");
             }
         }
 
