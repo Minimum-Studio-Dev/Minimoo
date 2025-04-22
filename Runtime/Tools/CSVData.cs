@@ -4,8 +4,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Linq;
+using System.Net.Http;
 using Minimoo.Attributes;
 using Minimoo.Extensions;
+using Cysharp.Threading.Tasks;
 
 namespace Minimoo.Tools
 {
@@ -13,9 +15,14 @@ namespace Minimoo.Tools
     public class CSVData : ScriptableObject
     {
         [SerializeField] private TextAsset _textAsset;
-        [SerializeField] private List<CSVRow> _rows = new List<CSVRow>();
+        [SerializeField] private string _sheetUrl;
+        [SerializeField] protected List<CSVRow> _rows = new List<CSVRow>();
+        [SerializeField] protected string[] _headers;
 
-        private string[] _headers;
+        private const string EXPORT_URL_FORMAT = "https://docs.google.com/spreadsheets/d/{0}/export?format=csv";
+
+        public string[] Headers => _headers;
+        public int RowCount => _rows.Count;
 
         private void OnEnable()
         {
@@ -38,13 +45,77 @@ namespace Minimoo.Tools
             D.Log($"CSV 데이터 파싱이 완료되었습니다. (총 {_rows.Count}행)");
         }
 
+        [Button("Download Sheet")]
+        public void DownloadSheet()
+        {
+            if (string.IsNullOrEmpty(_sheetUrl))
+            {
+                D.Error("Google Sheet URL이 지정되지 않았습니다.");
+                return;
+            }
+
+            var task = DownloadAndParseSheet();
+            if (task.Result)
+            {
+                D.Log($"Google Sheet 데이터 파싱이 완료되었습니다. (총 {_rows.Count}행)");
+            }
+        }
+
         public void SetTextAsset(TextAsset textAsset)
         {
             _textAsset = textAsset;
             ParseCSV(textAsset.text);
         }
 
-        private void ParseCSV(string csvText)
+        public void SetSheetUrl(string sheetUrl)
+        {
+            _sheetUrl = sheetUrl;
+        }
+
+        private async UniTask<bool> DownloadAndParseSheet()
+        {
+            try
+            {
+                var spreadsheetId = GetSpreadsheetId(_sheetUrl);
+                var exportUrl = string.Format(EXPORT_URL_FORMAT, spreadsheetId);
+
+                using (var client = new HttpClient())
+                {
+                    var response = await client.GetAsync(exportUrl);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        D.Error($"시트 다운로드 실패: {response.StatusCode}");
+                        return false;
+                    }
+
+                    var csvData = await response.Content.ReadAsStringAsync();
+                    ParseCSV(csvData);
+
+#if UNITY_EDITOR
+                    UnityEditor.EditorUtility.SetDirty(this);
+                    UnityEditor.AssetDatabase.SaveAssets();
+#endif
+
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                D.Error($"시트 데이터 다운로드 실패: {e.Message}");
+                return false;
+            }
+        }
+
+        private static string GetSpreadsheetId(string url)
+        {
+            var startIndex = url.IndexOf("/d/") + 3;
+            var endIndex = url.IndexOf("/", startIndex);
+            if (endIndex == -1)
+                endIndex = url.Length;
+            return url.Substring(startIndex, endIndex - startIndex);
+        }
+
+        protected void ParseCSV(string csvText)
         {
             _rows.Clear();
 
@@ -135,7 +206,7 @@ namespace Minimoo.Tools
             }
         }
 
-        private void ProcessRow(string[] values, int lineNumber)
+        protected void ProcessRow(string[] values, int lineNumber)
         {
             if (values.Length == 0) return;
 
@@ -156,7 +227,7 @@ namespace Minimoo.Tools
             }
         }
 
-        private string CleanupValue(string value)
+        protected string CleanupValue(string value)
         {
             if (string.IsNullOrEmpty(value))
                 return string.Empty;
@@ -173,7 +244,7 @@ namespace Minimoo.Tools
             return value.Trim();
         }
 
-        private string[] ParseCSVLine(string line)
+        protected string[] ParseCSVLine(string line)
         {
             var values = new List<string>();
             var currentValue = new System.Text.StringBuilder();
@@ -209,9 +280,6 @@ namespace Minimoo.Tools
             values.Add(CleanupValue(currentValue.ToString()));
             return values.ToArray();
         }
-
-        public int RowCount => _rows.Count;
-        public string[] Headers => _headers;
 
         public CSVRow GetRow(int rowIndex)
         {
