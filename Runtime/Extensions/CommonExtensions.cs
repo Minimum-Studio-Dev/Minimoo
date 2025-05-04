@@ -67,16 +67,8 @@ namespace Minimoo.Extensions
                     return true;
                 }
 
-                // 상속 관계 확인 (양방향)
-                if (resultType.IsAssignableFrom(targetType) || targetType.IsAssignableFrom(resultType))
-                {
-                    result = (T)target;
-                    return true;
-                }
-
-                result = default;
-                D.Warn($"Failed to cast {targetType.Name} to {resultType.Name}");
-                return false;
+                result = (T)target;
+                return true;
             }
             catch (Exception ex)
             {
