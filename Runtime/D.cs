@@ -37,15 +37,11 @@ namespace Minimoo
 
     public static class D
     {
-        private static bool s_saveToFile = false;
         private static bool s_enabled = false;
         public static bool Enabled { get { return s_enabled; } set { s_enabled = value; } }
         private static LogLevel s_logLevel = LogLevel.Info;
         private const int k_logValidDay = 2;
         private const int k_logHistoryMaxLength = 256;
-
-        private static List<string> logsToFile = new List<string>();
-        private static List<DebugLogItem> s_logHistory = new List<DebugLogItem>(k_logHistoryMaxLength);
 
         static D()
         {
@@ -64,42 +60,6 @@ namespace Minimoo
 #elif D_LOG_ERROR
             s_logLevel = LogLevel.Error;
 #endif
-
-#if D_LOG_SAVE
-            s_saveToFile = true;
-#endif
-        }
-
-        public static void SaveLog()
-        {
-#if !UNITY_WEBPLAYER
-            if (!Directory.Exists(Application.dataPath))
-            {
-                Directory.CreateDirectory(Application.dataPath);
-            }
-
-            string filePath = Path.Combine(Application.dataPath, "Log.txt");
-
-            FileInfo file = new FileInfo(filePath);
-            var span = System.DateTime.UtcNow - file.CreationTimeUtc;
-
-            if (span.Days > k_logValidDay)
-            {
-                File.Delete(filePath);
-                var writer = File.Create(filePath);
-                writer.Close();
-            }
-
-            using (var writer = File.AppendText(filePath))
-            {
-                for (int i = 0; i < logsToFile.Count; ++i)
-                {
-                    writer.WriteLine(logsToFile[i]);
-                }
-            }
-
-            logsToFile.Clear();
-#endif
         }
 
         public static void Log(object message)
@@ -117,14 +77,6 @@ namespace Minimoo
             output += $"<color={color}>{message}</color>";
 
             UnityEngine.Debug.Log(output);
-
-            var item = new DebugLogItem(message, color, Time.frameCount, Time.time, 3, true);
-            AddToLogHistory(item);
-
-            if (s_saveToFile)
-            {
-                logsToFile.Add(message.ToString());
-            }
         }
 
         public static void LogFormat(string format, params object[] args)
@@ -151,14 +103,6 @@ namespace Minimoo
             output += $"<color={color}>{message}</color>";
 
             UnityEngine.Debug.LogWarning(output);
-
-            var item = new DebugLogItem(message, color, Time.frameCount, Time.time, 3, true);
-            AddToLogHistory(item);
-
-            if (s_saveToFile)
-            {
-                logsToFile.Add(message.ToString());
-            }
         }
 
         public static void WarnFormat(string format, params object[] args)
@@ -185,14 +129,6 @@ namespace Minimoo
             output += $"<color={color}>{message}</color>";
 
             UnityEngine.Debug.LogError(output);
-
-            var item = new DebugLogItem(message, color, Time.frameCount, Time.time, 3, true);
-            AddToLogHistory(item);
-
-            if (s_saveToFile)
-            {
-                logsToFile.Add(message.ToString());
-            }
         }
 
         public static void ErrorFormat(string format, params object[] args)
@@ -227,14 +163,6 @@ namespace Minimoo
             }
 
             UnityEngine.Debug.LogException(exception);
-
-            var item = new DebugLogItem(output, color, Time.frameCount, Time.time, 3, true);
-            AddToLogHistory(item);
-
-            if (s_saveToFile)
-            {
-                logsToFile.Add(output);
-            }
         }
 
         public static void ExceptionFormat(string format, params object[] args)
@@ -246,38 +174,6 @@ namespace Minimoo
             Exception(message);
         }
 
-        private static void AddToLogHistory(DebugLogItem item)
-        {
-            if (s_logHistory.Count >= k_logHistoryMaxLength)
-            {
-                s_logHistory.RemoveAt(0);
-            }
-            s_logHistory.Add(item);
-        }
-
-        public static string GetLogHistory()
-        {
-            StringBuilder log = new StringBuilder();
-            for (int i = 0; i < s_logHistory.Count; i++)
-            {
-                string colorPrefix = !string.IsNullOrEmpty(s_logHistory[i].Color) ? $"<color={s_logHistory[i].Color}>" : "";
-                string colorSuffix = !string.IsNullOrEmpty(s_logHistory[i].Color) ? "</color>" : "";
-
-                if (s_logHistory[i].DisplayFrameCount)
-                {
-                    log.Append($"<color=#82d3f9>[{s_logHistory[i].Framecount}]</color> ");
-                }
-                log.Append($"<color=#f9a682>[{s_logHistory[i].Time:F3}]</color> ");
-                log.Append($"{colorPrefix}{s_logHistory[i].Message}{colorSuffix}");
-                log.Append(System.Environment.NewLine);
-            }
-            return log.ToString();
-        }
-
-        public static void ClearLogHistory()
-        {
-            s_logHistory.Clear();
-        }
 
         [System.Diagnostics.ConditionalAttribute("UNITY_EDITOR")]
         public static void Assert(bool condition)
