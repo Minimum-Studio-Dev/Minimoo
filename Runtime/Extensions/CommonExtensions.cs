@@ -67,8 +67,13 @@ namespace Minimoo.Extensions
                     return true;
                 }
 
-                result = (T)target;
-                return true;
+                if (target is T as targetResult)
+                {
+                    result = targetResult;
+                    return true;
+                }
+
+                return false;
             }
             catch (Exception ex)
             {
