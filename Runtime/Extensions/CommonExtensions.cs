@@ -51,9 +51,10 @@ namespace Minimoo.Extensions
         {
             try
             {
+                result = default;
+
                 if (target == null)
                 {
-                    result = default;
                     return false;
                 }
 
