@@ -67,13 +67,9 @@ namespace Minimoo
             if (!ShouldLog(LogLevel.Info))
                 return;
 
-            string callerObjectName = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Name;
             string color = "#00FFFF";
 
             string output = "";
-            output += $"<color=#82d3f9>[f{Time.frameCount}]</color> ";
-            output += $"<color=#f9a682>[{Time.time:F3}]</color> ";
-            output += $"{callerObjectName} : ";
             output += $"<color={color}>{message}</color>";
 
             UnityEngine.Debug.Log(output);
@@ -93,13 +89,9 @@ namespace Minimoo
             if (!ShouldLog(LogLevel.Warning))
                 return;
 
-            string callerObjectName = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Name;
             string color = "#FFC400";
 
             string output = "";
-            output += $"<color=#82d3f9>[f{Time.frameCount}]</color> ";
-            output += $"<color=#f9a682>[{Time.time:F3}]</color> ";
-            output += $"{callerObjectName} : ";
             output += $"<color={color}>{message}</color>";
 
             UnityEngine.Debug.LogWarning(output);
@@ -119,13 +111,9 @@ namespace Minimoo
             if (!ShouldLog(LogLevel.Error))
                 return;
 
-            string callerObjectName = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Name;
             string color = "#FF2A00";
 
             string output = "";
-            output += $"<color=#82d3f9>[f{Time.frameCount}]</color> ";
-            output += $"<color=#f9a682>[{Time.time:F3}]</color> ";
-            output += $"{callerObjectName} : ";
             output += $"<color={color}>{message}</color>";
 
             UnityEngine.Debug.LogError(output);
@@ -145,15 +133,11 @@ namespace Minimoo
             if (!ShouldLog(LogLevel.Exception))
                 return;
 
-            string callerObjectName = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Name;
             string color = "#FF2A00";
 
             var exception = new System.Exception(message.ToString());
 
             string output = "";
-            output += $"<color=#82d3f9>[f{Time.frameCount}]</color> ";
-            output += $"<color=#f9a682>[{Time.time:F3}]</color> ";
-            output += $"{callerObjectName} : ";
             output += $"<color={color}>{message}</color>";
             output += $"\n<color={color}>Stack Trace:</color>\n{exception.StackTrace}";
 
