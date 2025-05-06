@@ -67,7 +67,7 @@ namespace Minimoo.Extensions
                     return true;
                 }
 
-                if (target is T as targetResult)
+                if (target is T targetResult)
                 {
                     result = targetResult;
                     return true;
