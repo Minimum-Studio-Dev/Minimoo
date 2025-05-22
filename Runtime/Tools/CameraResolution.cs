@@ -1,6 +1,7 @@
 using UnityEngine;
 
-namespace Minimoo.Camera
+
+namespace Minimoo.Tools
 {
     [RequireComponent(typeof(Camera))]
     [DisallowMultipleComponent]
