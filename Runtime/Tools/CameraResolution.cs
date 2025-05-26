@@ -8,17 +8,30 @@ namespace Minimoo.Tools
     public class CameraResolution : MonoBehaviour
     {
         public Camera targetCam;
-        public Vector2 Landscape = new Vector2(640, 360);
+        public Vector2 TargetResolution = new Vector2(640, 360);
 
         #region Unity Messages
 
-        protected virtual void Start()
+        private void Awake()
+        {
+            if (targetCam == null)
+            {
+                targetCam = GetComponent<Camera>();
+            }
+        }
+
+        void Start()
         {
             if (targetCam == null)
             {
                 targetCam = GetComponent<Camera>();
             }
 
+            UpdateResolution();
+        }
+
+        void Update()
+        {
             UpdateResolution();
         }
 
@@ -30,7 +43,7 @@ namespace Minimoo.Tools
         {
             var rect = targetCam.rect;
 
-            var targetSize = Landscape;
+            var targetSize = TargetResolution;
 
             var scalewidth = (Screen.height / (float)Screen.width) / (targetSize.y / (float)targetSize.x); // (세로 / 가로)
             var scaleheight = 1f / scalewidth;
