@@ -89,13 +89,13 @@ namespace Minimoo
         private float m_CustomFillAmount = 1f;
         public float fillAmount
         {
-            get => m_CustomFillAmount;
+            get => base.fillAmount;
             set
             {
                 var clamped = Mathf.Clamp01(value);
-                if (!Mathf.Approximately(m_CustomFillAmount, clamped))
+                if (!Mathf.Approximately(base.fillAmount, clamped))
                 {
-                    m_CustomFillAmount = clamped;
+                    base.fillAmount = clamped;
                     SetVerticesDirty();
                 }
             }
