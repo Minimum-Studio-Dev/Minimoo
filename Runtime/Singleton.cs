@@ -50,6 +50,8 @@ namespace Minimoo
                 return;
             }
 
+                transform.SetParent(null);
+
             if (HasInstance && _instance != this)
             {
                 Destroy(gameObject);
@@ -57,14 +59,6 @@ namespace Minimoo
             }
 
             _instance = this as T;
-        }
-
-        private void Start()
-        {
-            if (Application.isPlaying && transform.parent != null)
-            {
-                transform.SetParent(null);
-            }
         }
     }
 }
