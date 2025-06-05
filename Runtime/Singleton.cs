@@ -50,7 +50,7 @@ namespace Minimoo
                 return;
             }
 
-                transform.SetParent(null);
+            transform.SetParent(null);
 
             if (HasInstance && _instance != this)
             {
