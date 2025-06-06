@@ -83,9 +83,8 @@ namespace Minimoo
                 }
             }
         }
-
     
-        public float fillAmount
+        public new float fillAmount
         {
             get => base.fillAmount;
             set
@@ -99,14 +98,14 @@ namespace Minimoo
             }
         }
 
-        public bool fillCenter = true;
+        public new bool fillCenter
         {
-            get => fillCenter;
+            get => base.fillCenter;
             set
             {
-                if (fillCenter != value)
+                if (base.fillCenter != value)
                 {
-                    fillCenter = value;
+                    base.fillCenter = value;
                     SetVerticesDirty();
                 }
             }
@@ -204,7 +203,7 @@ namespace Minimoo
                 var x2 = x + 1;
                 for (var y = 0; y < 3; y++)
                 {
-                    if (!m_CustomFillCenter && x == 1 && y == 1)
+                    if (!fillCenter && x == 1 && y == 1)
                         continue;
                     var y2 = y + 1;
                     float sliceStart, sliceEnd;
@@ -230,7 +229,7 @@ namespace Minimoo
                             sliceStart = sliceEnd = 0f;
                             break;
                     }
-                    if (sliceStart >= fillAmount)
+                    if (sliceStart >= this.fillAmount)
                         continue;
                     var vertices = new Vector4(s_SlicedVertices[x].x, s_SlicedVertices[y].y, s_SlicedVertices[x2].x, s_SlicedVertices[y2].y);
                     var uvs = new Vector4(s_SlicedUVs[x].x, s_SlicedUVs[y].y, s_SlicedUVs[x2].x, s_SlicedUVs[y2].y);
