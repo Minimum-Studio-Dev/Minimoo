@@ -29,8 +29,8 @@ namespace Minimoo
             raycastTargetProp = serializedObject.FindProperty("m_RaycastTarget");
             maskableProp = serializedObject.FindProperty("m_Maskable");
             fillDirectionProp = serializedObject.FindProperty("m_FillDirection");
-            fillAmountProp = serializedObject.FindProperty("m_CustomFillAmount");
-            fillCenterProp = serializedObject.FindProperty("m_CustomFillCenter");
+            fillAmountProp = serializedObject.FindProperty("fillAmount");
+            fillCenterProp = serializedObject.FindProperty("fillCenter");
             pixelsPerUnitMultiplierProp = serializedObject.FindProperty("m_CustomPixelsPerUnitMultiplier");
 
             spriteLabel = new GUIContent("Source Image");
@@ -84,9 +84,7 @@ namespace Minimoo
             }
         }
 
-        [Range(0, 1)]
-        [SerializeField]
-        private float m_CustomFillAmount = 1f;
+    
         public float fillAmount
         {
             get => base.fillAmount;
@@ -101,16 +99,14 @@ namespace Minimoo
             }
         }
 
-        [SerializeField]
-        private bool m_CustomFillCenter = true;
-        public bool fillCenter
+        public bool fillCenter = true;
         {
-            get => m_CustomFillCenter;
+            get => fillCenter;
             set
             {
-                if (m_CustomFillCenter != value)
+                if (fillCenter != value)
                 {
-                    m_CustomFillCenter = value;
+                    fillCenter = value;
                     SetVerticesDirty();
                 }
             }
@@ -151,7 +147,7 @@ namespace Minimoo
         private void GenerateSlicedFilledSprite(VertexHelper vh)
         {
             vh.Clear();
-            if (m_CustomFillAmount < 0.001f)
+            if (fillAmount < 0.001f)
                 return;
             var rect = GetPixelAdjustedRect();
             var outer = Sprites.DataUtility.GetOuterUV(overrideSprite);
@@ -167,7 +163,7 @@ namespace Minimoo
                     rect.y + rect.height * (padding.y / spriteH),
                     rect.x + rect.width * ((spriteW - padding.z) / spriteW),
                     rect.y + rect.height * ((spriteH - padding.w) / spriteH));
-                GenerateFilledSprite(vh, vertices, outer, m_CustomFillAmount);
+                GenerateFilledSprite(vh, vertices, outer, fillAmount);
                 return;
             }
             var inner = Sprites.DataUtility.GetInnerUV(overrideSprite);
@@ -234,11 +230,11 @@ namespace Minimoo
                             sliceStart = sliceEnd = 0f;
                             break;
                     }
-                    if (sliceStart >= m_CustomFillAmount)
+                    if (sliceStart >= fillAmount)
                         continue;
                     var vertices = new Vector4(s_SlicedVertices[x].x, s_SlicedVertices[y].y, s_SlicedVertices[x2].x, s_SlicedVertices[y2].y);
                     var uvs = new Vector4(s_SlicedUVs[x].x, s_SlicedUVs[y].y, s_SlicedUVs[x2].x, s_SlicedUVs[y2].y);
-                    float fillAmount = (m_CustomFillAmount - sliceStart) / (sliceEnd - sliceStart);
+                    var fillAmount = (this.fillAmount - sliceStart) / (sliceEnd - sliceStart);
                     GenerateFilledSprite(vh, vertices, uvs, fillAmount);
                 }
             }
@@ -269,7 +265,7 @@ namespace Minimoo
 
         private void GenerateFilledSprite(VertexHelper vh, Vector4 vertices, Vector4 uvs, float fillAmount)
         {
-            if (m_CustomFillAmount < 0.001f)
+            if (fillAmount < 0.001f)
                 return;
             float uvLeft = uvs.x;
             float uvBottom = uvs.y;
