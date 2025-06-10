@@ -9,11 +9,11 @@ using Sprites = UnityEngine.Sprites;
 
 namespace Minimoo
 {
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
     using UnityEditor;
 
     // Custom Editor to order the variables in the Inspector similar to Image component
-    [CustomEditor( typeof( SlicedFilledImage ) ), CanEditMultipleObjects]
+    [CustomEditor(typeof(SlicedFilledImage)), CanEditMultipleObjects]
     public class SlicedFilledImageEditor : Editor
     {
         private SerializedProperty spriteProp, colorProp, materialProp, raycastTargetProp, maskableProp;
@@ -29,8 +29,8 @@ namespace Minimoo
             raycastTargetProp = serializedObject.FindProperty("m_RaycastTarget");
             maskableProp = serializedObject.FindProperty("m_Maskable");
             fillDirectionProp = serializedObject.FindProperty("m_FillDirection");
-            fillAmountProp = serializedObject.FindProperty("fillAmount");
-            fillCenterProp = serializedObject.FindProperty("fillCenter");
+            fillAmountProp = serializedObject.FindProperty("m_FillAmount");
+            fillCenterProp = serializedObject.FindProperty("m_FillCenter");
             pixelsPerUnitMultiplierProp = serializedObject.FindProperty("m_CustomPixelsPerUnitMultiplier");
 
             spriteLabel = new GUIContent("Source Image");
@@ -61,10 +61,10 @@ namespace Minimoo
             serializedObject.ApplyModifiedProperties();
         }
     }
-    #endif
+#endif
 
     // Credit: https://bitbucket.org/Unity-Technologies/ui/src/2018.4/UnityEngine.UI/UI/Core/Image.cs
-    [AddComponentMenu( "UI/Sliced Filled Image", 11 )]
+    [AddComponentMenu("UI/Sliced Filled Image", 11)]
     public class SlicedFilledImage : Image
     {
         public enum FillDirection { Right = 0, Left = 1, Up = 2, Down = 3 }
@@ -79,33 +79,6 @@ namespace Minimoo
                 if (m_FillDirection != value)
                 {
                     m_FillDirection = value;
-                    SetVerticesDirty();
-                }
-            }
-        }
-    
-        public new float fillAmount
-        {
-            get => base.fillAmount;
-            set
-            {
-                var clamped = Mathf.Clamp01(value);
-                if (!Mathf.Approximately(base.fillAmount, clamped))
-                {
-                    base.fillAmount = clamped;
-                    SetVerticesDirty();
-                }
-            }
-        }
-
-        public new bool fillCenter
-        {
-            get => base.fillCenter;
-            set
-            {
-                if (base.fillCenter != value)
-                {
-                    base.fillCenter = value;
                     SetVerticesDirty();
                 }
             }
@@ -327,12 +300,12 @@ namespace Minimoo
             private set => base.type = value;
         }
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         protected override void OnValidate()
         {
             base.OnValidate();
             SetVerticesDirty();
         }
-        #endif
+#endif
     }
 }
