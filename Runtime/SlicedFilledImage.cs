@@ -31,7 +31,7 @@ namespace Minimoo
             fillDirectionProp = serializedObject.FindProperty("m_FillDirection");
             fillAmountProp = serializedObject.FindProperty("m_FillAmount");
             fillCenterProp = serializedObject.FindProperty("m_FillCenter");
-            pixelsPerUnitMultiplierProp = serializedObject.FindProperty("m_CustomPixelsPerUnitMultiplier");
+            pixelsPerUnitMultiplierProp = serializedObject.FindProperty("m_PixelsPerUnitMultiplier");
 
             spriteLabel = new GUIContent("Source Image");
             colorLabel = new GUIContent("Color");
