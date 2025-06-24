@@ -11,6 +11,7 @@ namespace Minimoo.Tools.Editor
 
         const string k_LoadBootstrapSceneOnPlay = "MINIMOO/Bootstrap/Load Bootstrap Scene On Play";
         const string k_DoNotLoadBootstrapSceneOnPlay = "MINIMOO/Bootstrap/Don't Load Bootstrap Scene On Play";
+        const string k_OpenBootstrapScene = "MINIMOO/Bootstrap/Open Bootstrap Scene";
 
         const string k_TestRunnerSceneName = "InitTestScene";
 
@@ -66,6 +67,25 @@ namespace Minimoo.Tools.Editor
         static void DisableDoNotLoadBootstrapSceneOnPlay()
         {
             ShouldLoadBootstrapScene = false;
+        }
+
+         [MenuItem(k_OpenBootstrapScene)]
+        static void OpenBootstrapScene()
+        {
+            if (string.IsNullOrEmpty(BootstrapScene))
+            {
+                return;
+            }
+
+            if (!System.Array.Exists(EditorBuildSettings.scenes, scene => scene.path == BootstrapScene))
+            {
+                return;
+            }
+
+            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                EditorSceneManager.OpenScene(BootstrapScene);
+            }
         }
 
         static void EditorApplicationOnplayModeStateChanged(PlayModeStateChange playModeStateChange)
