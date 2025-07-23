@@ -14,54 +14,31 @@ namespace Minimoo
         protected IEnumerator generator;
         protected MonoBehaviour owner;
 
-        private bool _isRunning = false;
-        public bool IsRunning => _isRunning && owner != null && owner.gameObject.activeInHierarchy;
-
         public MNMCoroutine(IEnumerator generator, MonoBehaviour owner)
         {
             this.generator = generator;
             this.owner = owner;
-            _isRunning = false;
         }
 
         // Stop the coroutine form being called again
         public void Stop()
         {
-            if (_isRunning && owner != null)
-            {
-                owner.StopCoroutine(this);
-            }
             generator = null;
-            _isRunning = false;
         }
 
         public void Start()
         {
-            _isRunning = true;
             owner.StartCoroutine(this);
         }
 
         public bool MoveNext()
         {
-            // owner가 null이거나 비활성화되었으면 중지
-            if (owner == null || !owner.gameObject.activeInHierarchy)
-            {
-                _isRunning = false;
-                return false;
-            }
-
             if (generator != null)
             {
-                var hasNext = generator.MoveNext();
-                if (!hasNext)
-                {
-                    _isRunning = false;
-                }
-                return hasNext;
+                return generator.MoveNext();
             }
             else
             {
-                _isRunning = false;
                 return false;
             }
         }
