@@ -67,10 +67,7 @@ namespace Minimoo
             if (!ShouldLog(LogLevel.Info))
                 return;
 
-            string color = "#00FFFF";
-
-            string output = "";
-            output += $"<color={color}>{message}</color>";
+            string output = $"<color=#00FFFF>{message}</color>";
 
             UnityEngine.Debug.Log(output);
         }
@@ -84,15 +81,17 @@ namespace Minimoo
             Log(message);
         }
 
+        public static void LogWarning(object message, params object[] args)
+        {
+            WarnFormat(format, args);
+        }
+
         public static void Warn(object message)
         {
             if (!ShouldLog(LogLevel.Warning))
                 return;
 
-            string color = "#FFC400";
-
-            string output = "";
-            output += $"<color={color}>{message}</color>";
+            string output = $"<color=#FFC400>{message}</color>";
 
             UnityEngine.Debug.LogWarning(output);
         }
@@ -106,15 +105,17 @@ namespace Minimoo
             Warn(message);
         }
 
+        public static void LogError(object message, params object[] args)
+        {
+            ErrorFormat(format, args);
+        }
+
         public static void Error(object message)
         {
             if (!ShouldLog(LogLevel.Error))
                 return;
 
-            string color = "#FF2A00";
-
-            string output = "";
-            output += $"<color={color}>{message}</color>";
+            string output = $"{message}";
 
             UnityEngine.Debug.LogError(output);
         }
@@ -128,25 +129,31 @@ namespace Minimoo
             Error(message);
         }
 
+        public static void LogException(object message, params object[] args)
+        {
+            ExceptionFormat(format, args);
+        }
+
         public static void Exception(object message)
         {
             if (!ShouldLog(LogLevel.Exception))
                 return;
 
-            string color = "#FF2A00";
 
             var exception = new System.Exception(message.ToString());
 
-            string output = "";
-            output += $"<color={color}>{message}</color>";
-            output += $"\n<color={color}>Stack Trace:</color>\n{exception.StackTrace}";
+            var color = "#FF2A00";
+            var stringBuilder = new StringBuilder();
+
+            stringBuilder.Append($"<color={color}>{message}</color>");
+            stringBuilder.Append($"\n<color={color}>Stack Trace:</color>\n{exception.StackTrace}");
 
             if (exception.InnerException != null)
             {
-                output += $"\n<color={color}>Inner Exception:</color>\n{exception.InnerException}";
+                stringBuilder.Append($"\n<color={color}>Inner Exception:</color>\n{exception.InnerException}");
             }
 
-            UnityEngine.Debug.LogException(exception);
+            UnityEngine.Debug.LogException(stringBuilder.ToString());
         }
 
         public static void ExceptionFormat(string format, params object[] args)
