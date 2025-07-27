@@ -83,7 +83,7 @@ namespace Minimoo
 
         public static void LogWarning(object message, params object[] args)
         {
-            WarnFormat(format, args);
+            WarnFormat(message, args);
         }
 
         public static void Warn(object message)
@@ -107,7 +107,7 @@ namespace Minimoo
 
         public static void LogError(object message, params object[] args)
         {
-            ErrorFormat(format, args);
+            ErrorFormat(message, args);
         }
 
         public static void Error(object message)
@@ -131,7 +131,7 @@ namespace Minimoo
 
         public static void LogException(object message, params object[] args)
         {
-            ExceptionFormat(format, args);
+            ExceptionFormat(message, args);
         }
 
         public static void Exception(object message)
