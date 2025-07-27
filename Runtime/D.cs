@@ -129,40 +129,32 @@ namespace Minimoo
             Error(message);
         }
 
-        public static void LogException(object message)
+        public static void LogException(Exception exception)
         {
-            Exception(message);
+            Exception(exception, message);
         }
 
-        public static void Exception(object message)
+        public static void Exception(Exception exception)
         {
             if (!ShouldLog(LogLevel.Exception))
                 return;
-
-
-            var exception = new System.Exception(message.ToString());
 
             var color = "#FF2A00";
             var stringBuilder = new StringBuilder();
 
-            stringBuilder.Append($"<color={color}>{message}</color>");
-            stringBuilder.Append($"\n<color={color}>Stack Trace:</color>\n{exception.StackTrace}");
+            stringBuilder.Append($"<color={color}>Message: \n{exception.Message}</color>");
+
+            if (exception.StackTrace != null)
+            {
+                stringBuilder.Append($"\n<color={color}>Stack Trace: \n{exception.StackTrace} </color>");
+            }
 
             if (exception.InnerException != null)
             {
-                stringBuilder.Append($"\n<color={color}>Inner Exception:</color>\n{exception.InnerException}");
+                stringBuilder.Append($"\n<color={color}>Inner Exception: \n{exception.InnerException}</color>");
             }
 
             UnityEngine.Debug.LogException(stringBuilder.ToString());
-        }
-
-        public static void ExceptionFormat(string format, params object[] args)
-        {
-            if (!ShouldLog(LogLevel.Exception))
-                return;
-
-            string message = string.Format(format, args);
-            Exception(message);
         }
 
 
